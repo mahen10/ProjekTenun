@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Models;
-
+use app\Models\Tenun;
 use Illuminate\Database\Eloquent\Model;
 
 class produk_tenun extends Model
@@ -17,12 +17,13 @@ class produk_tenun extends Model
         'stok',
         'harga_jual',
         'gambar',
+        'deskripsi',
     ];
 
     // Relasi: ProdukTenun milik satu vendor
     public function vendor()
     {
-        return $this->belongsTo(Tenun::class);
+        return $this->belongsTo(Tenun::class, 'vendor_id');
     }
 
     // (Opsional) Jika ingin menambahkan format harga

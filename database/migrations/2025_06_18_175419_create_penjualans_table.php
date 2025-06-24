@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('penjualan', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('vendor_id')->constrained('vendors')->onDelete('cascade');
-            $table->foreignId('produk_id')->constrained('produk_tenun')->onDelete('cascade');
-            $table->integer('jumlah_terjual');
-            $table->decimal('total_harga', 12, 2);
-            $table->date('tanggal_penjualan');
-            $table->timestamps();
+        Schema::table('penjualan', function (Blueprint $table) {
+            // Hapus constraint lama
+            $table->dropForeign(['produk_id']);
+            // Tambahkan constraint baru dengan ON DELETE SET NULL
+            $table->foreign('produk_id')
+                  ->references('id')
+                  ->on('produk_tenun')
+                  ->onDelete('set null');
         });
     }
 
@@ -27,6 +27,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('penjualans');
+        Schema::table('penjualan', function (Blueprint $table) {
+            // Kembalikan ke ON DELETE CASCADE jika rollback
+            $table->dropForeign(['produk_id']);
+            $table->foreign('produk_id')
+                  ->references('id')
+                  ->on('produk_tenun')
+                  ->onDelete('cascade');
+        });
     }
 };

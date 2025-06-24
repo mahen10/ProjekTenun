@@ -4,6 +4,8 @@ namespace App\Http\Controllers\ApiController;
 
 use App\Http\Controllers\Controller;
 use App\Models\produk_tenun;
+use App\Models\Tenun;
+
 use Illuminate\Http\Request;
 
 class produk_tenunController extends Controller
@@ -14,13 +16,25 @@ class produk_tenunController extends Controller
     public function index()
     {
         try {
-            $produk = produk_tenun::latest()->get();
-            return response()->json($produk, 201);
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            // Cari vendor yang terkait dengan user
+            $vendor = Tenun::where('user_id', $user->id)->first();
+            if (!$vendor) {
+                return response()->json(['error' => 'Vendor not found'], 404);
+            }
+
+            // Ambil produk hanya untuk vendor tersebut
+            $produk = produk_tenun::where('vendor_id', $vendor->id)->latest()->get();
+            return response()->json($produk, 200); // Status 200 untuk GET
         } catch (\Exception $e) {
             return response()->json(
                 [
-                    'error' => 'failed to get data',
-                    'massage' => $e->getMessage()
+                    'error' => 'Failed to get data',
+                    'message' => $e->getMessage()
                 ],
                 500
             );
@@ -38,10 +52,19 @@ class produk_tenunController extends Controller
             'kategori' => 'nullable|string',
             'stok' => 'required|integer',
             'harga_jual' => 'required|numeric',
-            'gambar' => 'nullable|string|max:255', // atau validasi file kalau upload base64/file
+            'gambar' => 'nullable|string|max:255',
+            'deskripsi' => 'nullable|string',
         ]);
 
-        $produk = produk_tenun::create($request->all());
+        $produk = produk_tenun::create([
+            'vendor_id' => $request->vendor_id, // Ubah ke vendors_id
+            'nama_produk' => $request->nama_produk,
+            'kategori' => $request->kategori,
+            'stok' => $request->stok,
+            'harga_jual' => $request->harga_jual,
+            'gambar' => $request->gambar,
+            'deskripsi' => $request->deskripsi,
+        ]);
         return response()->json($produk, 201);
     }
 

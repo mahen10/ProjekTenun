@@ -14,29 +14,63 @@ class pembelian_bahanController extends Controller
     public function index()
     {
         try {
-            $data = pembelian::latest()->get();
-            return response()->json($data, 200);
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            // Ambil vendor milik user yang login
+            $vendor = \App\Models\Tenun::where('user_id', $user->id)->first();
+            if (!$vendor) {
+                return response()->json(['error' => 'Vendor not found'], 404);
+            }
+
+            // Ambil pembelian hanya milik vendor itu saja
+            $pembelian = pembelian::where('vendor_id', $vendor->id)->latest()->get();
+
+            return response()->json($pembelian, 200);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Gagal mengambil data', 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'error' => 'Gagal mengambil data',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
+
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $vendor = \App\Models\Tenun::where('user_id', $user->id)->first();
+        if (!$vendor) {
+            return response()->json(['error' => 'Vendor not found'], 404);
+        }
+
         $request->validate([
-            'vendor_id' => 'required|exists:vendors,id',
             'nama_bahan' => 'required|string',
             'jumlah' => 'required|integer',
             'harga_total' => 'required|numeric',
             'tanggal_pembelian' => 'required|date',
         ]);
 
-        $data = pembelian::create($request->all());
-        return response()->json($data, 201);
+        $pembelian = pembelian::create([
+            'vendor_id' => $vendor->id,
+            'nama_bahan' => $request->nama_bahan,
+            'jumlah' => $request->jumlah,
+            'harga_total' => $request->harga_total,
+            'tanggal_pembelian' => $request->tanggal_pembelian,
+        ]);
+
+        return response()->json($pembelian, 201);
     }
+
 
     /**
      * Display the specified resource.

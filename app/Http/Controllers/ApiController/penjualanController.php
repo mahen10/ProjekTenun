@@ -49,86 +49,59 @@ class penjualanController extends Controller
     public function store(Request $request)
     {
         try {
-            // Validasi input
             $request->validate([
-                'vendor_id' => 'required|exists:vendors,id',
                 'produk_id' => 'required|exists:produk_tenun,id',
                 'jumlah_terjual' => 'required|integer|min:1',
                 'tanggal_penjualan' => 'required|date',
             ]);
 
-            // Ambil pengguna yang login
             $user = auth()->user();
             if (!$user) {
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            // Cari vendor yang terkait dengan user
             $vendor = Tenun::where('user_id', $user->id)->first();
             if (!$vendor) {
                 return response()->json(['error' => 'Vendor not found'], 404);
             }
 
-            // Pastikan vendor_id dalam request sesuai dengan vendor pengguna
-            if ($request->vendor_id != $vendor->id) {
-                return response()->json(['error' => 'Unauthorized: Cannot create sale for another vendor'], 403);
-            }
-
-            // Ambil produk berdasarkan produk_id
             $produk = produk_tenun::findOrFail($request->produk_id);
-
-            // Pastikan produk milik vendor yang sama
             if ($produk->vendor_id != $vendor->id) {
                 return response()->json(['error' => 'Unauthorized: Product does not belong to this vendor'], 403);
             }
 
-            // Validasi stok cukup
             if ($produk->stok < $request->jumlah_terjual) {
                 return response()->json(['error' => 'Insufficient stock'], 422);
             }
 
-            // Hitung total_harga secara otomatis
             $total_harga = $produk->harga_jual * $request->jumlah_terjual;
 
-            // Gunakan transaksi untuk memastikan konsistensi data
             DB::beginTransaction();
 
-            // Buat data penjualan
             $penjualan = penjualan::create([
-                'vendor_id' => $vendor->id, // Langsung dari server, bukan dari request!
+                'vendor_id' => $vendor->id,
                 'produk_id' => $request->produk_id,
                 'jumlah_terjual' => $request->jumlah_terjual,
                 'total_harga' => $total_harga,
                 'tanggal_penjualan' => $request->tanggal_penjualan,
-
             ]);
 
-            // Kurangi stok produk
             $produk->stok -= $request->jumlah_terjual;
 
-            // Hapus produk jika stok menjadi 0
             if ($produk->stok == 0) {
-                $produk->delete(); // Ini juga akan menghapus penjualan terkait karena onDelete('cascade')
+                $produk->delete();
             } else {
                 $produk->save();
             }
 
-            // Commit transaksi
             DB::commit();
 
             return response()->json($penjualan, 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'error' => 'Validation failed',
-                'messages' => $e->errors(),
-            ], 422);
+            return response()->json(['error' => 'Validation failed', 'messages' => $e->errors()], 422);
         } catch (\Exception $e) {
-            // Rollback transaksi jika terjadi error
             DB::rollBack();
-            return response()->json([
-                'error' => 'Failed to create sale',
-                'message' => $e->getMessage(),
-            ], 500);
+            return response()->json(['error' => 'Failed to create sale', 'message' => $e->getMessage()], 500);
         }
     }
 

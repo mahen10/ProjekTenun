@@ -14,18 +14,26 @@ class TenunController extends Controller
     public function index()
     {
         try {
-            $produk = Tenun::latest()->get();
-            return response()->json($produk, 201);
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            // Ambil vendor milik user login
+            $vendor = Tenun::where('user_id', $user->id)->first();
+            if (!$vendor) {
+                return response()->json(['error' => 'Vendor not found'], 404);
+            }
+
+            return response()->json($vendor, 200);
         } catch (\Exception $e) {
-            return response()->json(
-                [
-                    'error' => 'failed to create data',
-                    'massage' => $e->getMessage()
-                ],
-                500
-            );
+            return response()->json([
+                'error' => 'Failed to get data',
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
+
 
     /**
      * Store a newly created resource in storage.

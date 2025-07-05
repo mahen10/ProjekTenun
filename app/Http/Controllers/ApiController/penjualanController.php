@@ -95,11 +95,12 @@ class penjualanController extends Controller
 
             // Buat data penjualan
             $penjualan = penjualan::create([
-                'vendor_id' => $request->vendor_id,
+                'vendor_id' => $vendor->id, // Langsung dari server, bukan dari request!
                 'produk_id' => $request->produk_id,
                 'jumlah_terjual' => $request->jumlah_terjual,
                 'total_harga' => $total_harga,
                 'tanggal_penjualan' => $request->tanggal_penjualan,
+
             ]);
 
             // Kurangi stok produk

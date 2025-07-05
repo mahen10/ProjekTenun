@@ -46,28 +46,42 @@ class produk_tenunController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $vendor = Tenun::where('user_id', $user->id)->first();
+        if (!$vendor) {
+            return response()->json(['error' => 'Vendor not found'], 404);
+        }
+
         $request->validate([
-            'vendor_id' => 'required|exists:vendors,id',
             'nama_produk' => 'required|string',
             'kategori' => 'nullable|string',
             'stok' => 'required|integer',
             'harga_jual' => 'required|numeric',
-            'gambar' => 'nullable|string|max:255',
+            'gambar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // VALIDASI IMAGE
             'deskripsi' => 'nullable|string',
         ]);
 
+        // Upload gambar (jika ada)
+        $gambarPath = null;
+        if ($request->hasFile('gambar')) {
+            $gambarPath = $request->file('gambar')->store('produk_images', 'public');
+        }
+
         $produk = produk_tenun::create([
-            'vendor_id' => $request->vendor_id, // Ubah ke vendors_id
+            'vendor_id' => $vendor->id,
             'nama_produk' => $request->nama_produk,
             'kategori' => $request->kategori,
             'stok' => $request->stok,
             'harga_jual' => $request->harga_jual,
-            'gambar' => $request->gambar,
+            'gambar' => $gambarPath,  // simpan path gambar
             'deskripsi' => $request->deskripsi,
         ]);
         return response()->json($produk, 201);
     }
-
     /**
      * Display the specified resource.
      */
@@ -82,14 +96,35 @@ class produk_tenunController extends Controller
     public function update(Request $request, string $id)
     {
         $produk = produk_tenun::findOrFail($id);
-        $produk->update($request->only([
-            'nama_produk',
-            'kategori',
-            'stok',
-            'harga_jual'
-        ]));
+
+        $request->validate([
+            'nama_produk' => 'required|string',
+            'kategori' => 'nullable|string',
+            'stok' => 'required|integer',
+            'harga_jual' => 'required|numeric',
+            'gambar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'deskripsi' => 'nullable|string',
+        ]);
+
+        // Upload gambar baru (jika ada)
+        if ($request->hasFile('gambar')) {
+            $gambarPath = $request->file('gambar')->store('produk_images', 'public');
+            $produk->gambar = $gambarPath;
+        }
+
+        $produk->update([
+            'nama_produk' => $request->nama_produk,
+            'kategori' => $request->kategori,
+            'stok' => $request->stok,
+            'harga_jual' => $request->harga_jual,
+            'deskripsi' => $request->deskripsi,
+        ]);
+
+        $produk->save();
+
         return response()->json($produk);
     }
+
 
     /**
      * Remove the specified resource from storage.

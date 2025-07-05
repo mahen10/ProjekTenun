@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(
         Route::get('/tenun/{id}', [TenunController::class, 'show']);    // Detail vendor
         Route::put('/tenun/{id}', [TenunController::class, 'update']);  // Update vendor
         Route::delete('/tenun/{id}', [TenunController::class, 'destroy']); // Hapus vendor
+        
 
 
         // 📦 PENJUALAN

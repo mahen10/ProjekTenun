@@ -27,7 +27,7 @@ class pembelian_bahanController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'vendor_id' => 'required|exists:tenuns,id',
+            'vendor_id' => 'required|exists:vendors,id',
             'nama_bahan' => 'required|string',
             'jumlah' => 'required|integer',
             'harga_total' => 'required|numeric',

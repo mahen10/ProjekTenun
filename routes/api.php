@@ -6,6 +6,7 @@ use App\Http\Controllers\ApiController\pembelian_bahanController;
 use App\Http\Controllers\ApiController\penjualanController;
 use App\Http\Controllers\ApiController\laporan_bulananController;
 use App\Http\Controllers\ApiController\AuthController;
+use App\Http\Controllers\ApiController\GrafikPenjualanController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Whoops\Run;
@@ -13,6 +14,7 @@ use Whoops\Run;
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(
+
     function () {
         // 📦 PRODUK TENUN (stok barang)
         Route::get('/produk', [produk_tenunController::class, 'index']);        // List semua produk vendor login
@@ -27,7 +29,7 @@ Route::middleware('auth:sanctum')->group(
         Route::get('/tenun/{id}', [TenunController::class, 'show']);    // Detail vendor
         Route::put('/tenun/{id}', [TenunController::class, 'update']);  // Update vendor
         Route::delete('/tenun/{id}', [TenunController::class, 'destroy']); // Hapus vendor
-        
+
 
 
         // 📦 PENJUALAN
@@ -50,6 +52,9 @@ Route::middleware('auth:sanctum')->group(
         Route::get('/laporan-bulanan/{id}', [laporan_bulananController::class, 'show']);
         Route::put('/laporan-bulanan/{id}', [laporan_bulananController::class, 'update']);
         Route::delete('/laporan-bulanan/{id}', [laporan_bulananController::class, 'destroy']);
+
+
+        Route::get('/grafik-penjualan', [GrafikPenjualanController::class, 'grafikTahunan']);
     }
 
 

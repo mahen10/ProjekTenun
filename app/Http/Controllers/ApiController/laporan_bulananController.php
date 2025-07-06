@@ -7,67 +7,129 @@ use App\Models\laporan_bulanan;
 use App\Models\pembelian;
 use Illuminate\Http\Request;
 use App\Models\penjualan;
+use App\Models\Tenun;
+
+
 
 class laporan_bulananController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    { {
-            try {
-                $data = laporan_bulanan::latest()->get();
-                return response()->json($data, 200);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'error' => 'Gagal mengambil data',
-                    'message' => $e->getMessage()
-                ], 500);
+    public function index(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
             }
+
+            $vendor = Tenun::where('user_id', $user->id)->first();
+            if (!$vendor) {
+                return response()->json(['error' => 'Vendor not found'], 404);
+            }
+
+            // Ambil bulan dari request atau default bulan sekarang
+            $bulan = $request->bulan ?? date('Y-m');
+
+            if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $bulan)) {
+                return response()->json(['error' => 'Format bulan tidak valid, gunakan YYYY-MM'], 422);
+            }
+
+            $tahun = substr($bulan, 0, 4);
+            $angka_bulan = substr($bulan, 5, 2);
+
+            // Hitung total penjualan
+            $total_penjualan = penjualan::where('vendor_id', $vendor->id)
+                ->whereYear('tanggal_penjualan', $tahun)
+                ->whereMonth('tanggal_penjualan', $angka_bulan)
+                ->sum('total_harga');
+            // Ambil data penjualan per bulan untuk 1 tahun tertentu
+            $laporan = laporan_bulanan::where('vendor_id', $vendor->id)
+                ->whereYear('bulan', $tahun)
+                ->orderBy('bulan')
+                ->get(['bulan', 'total_penjualan']);
+
+            // Hitung total pembelian
+            $total_pembelian = pembelian::where('vendor_id', $vendor->id)
+                ->whereYear('tanggal_pembelian', $tahun)
+                ->whereMonth('tanggal_pembelian', $angka_bulan)
+                ->sum('harga_total');
+
+            return response()->json([
+                'bulan' => $bulan,
+                'total_penjualan' => $total_penjualan,
+                'total_pembelian' => $total_pembelian,
+                'grafik' => $laporan,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Gagal mengambil data',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
+
+
+
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
-        // Validasi input
         $request->validate([
-            'vendor_id' => 'required|exists:vendors,id',
-            'bulan' => 'required|regex:/^\d{4}-(0[1-9]|1[0-2])$/', // Contoh: 2025-06
+            'bulan' => 'required|regex:/^\d{4}-(0[1-9]|1[0-2])$/', // Format: YYYY-MM
         ]);
 
-        // Ambil input
-        $vendor_id = $request->vendor_id;
-        $bulan = $request->bulan;
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
 
-        // Pisahkan tahun dan bulan
-        $tahun = substr($bulan, 0, 4); // ambil 4 digit pertama
-        $angka_bulan = substr($bulan, 5, 2); // ambil 2 digit setelah tanda -
+            $vendor = Tenun::where('user_id', $user->id)->first();
+            if (!$vendor) {
+                return response()->json(['error' => 'Vendor not found'], 404);
+            }
 
-        // Hitung total penjualan
-        $jumlah_terjual = penjualan::where('vendor_id', $vendor_id)
-            ->whereYear('tanggal_penjualan', $tahun)
-            ->whereMonth('tanggal_penjualan', $angka_bulan)
-            ->sum('total_harga');
+            $bulan = $request->bulan;
+            $tahun = substr($bulan, 0, 4);
+            $angka_bulan = substr($bulan, 5, 2);
 
-        // Hitung total pembelian
-        $total_pembelian = pembelian::where('vendor_id', $vendor_id)
-            ->whereYear('tanggal_pembelian', $tahun)
-            ->whereMonth('tanggal_pembelian', $angka_bulan)
-            ->sum('harga_total');
+            // Hitung total penjualan
+            $total_penjualan = penjualan::where('vendor_id', $vendor->id)
+                ->whereYear('tanggal_penjualan', $tahun)
+                ->whereMonth('tanggal_penjualan', $angka_bulan)
+                ->sum('total_harga');
 
-        // Simpan ke database
-        $laporan = laporan_bulanan::create([
-            'vendor_id' => $vendor_id,
-            'bulan' => $bulan,
-            'total_penjualan' => $jumlah_terjual,
-            'total_pembelian' => $total_pembelian,
-        ]);
+            // Hitung total pembelian
+            $total_pembelian = pembelian::where('vendor_id', $vendor->id)
+                ->whereYear('tanggal_pembelian', $tahun)
+                ->whereMonth('tanggal_pembelian', $angka_bulan)
+                ->sum('harga_total');
 
-        return response()->json($laporan, 201);
+            // Cek apakah laporan sudah ada
+            $laporan = laporan_bulanan::updateOrCreate(
+                [
+                    'vendor_id' => $vendor->id,
+                    'bulan' => $bulan,
+                ],
+                [
+                    'total_penjualan' => $total_penjualan,
+                    'total_pembelian' => $total_pembelian,
+                ]
+            );
+
+            return response()->json($laporan, 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Gagal membuat laporan',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
+
 
     /**
      * Display the specified resource.

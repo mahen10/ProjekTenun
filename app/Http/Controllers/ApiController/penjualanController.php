@@ -81,6 +81,7 @@ class penjualanController extends Controller
             $penjualan = penjualan::create([
                 'vendor_id' => $vendor->id,
                 'produk_id' => $request->produk_id,
+                'nama_produk' => $produk->nama_produk, // ✅ ini wajib
                 'jumlah_terjual' => $request->jumlah_terjual,
                 'total_harga' => $total_harga,
                 'tanggal_penjualan' => $request->tanggal_penjualan,

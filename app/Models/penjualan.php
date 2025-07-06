@@ -13,6 +13,7 @@ class penjualan extends Model
     protected $fillable = [
         'vendor_id',
         'produk_id',
+        'nama_produk',
         'jumlah_terjual',
         'total_harga',
         'tanggal_penjualan',

@@ -76,4 +76,25 @@ class TenunResource extends Resource
             'edit' => Pages\EditTenun::route('/{record}/edit'),
         ];
     }
+
+    // update ni
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->role === 'super_admin';
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->role === 'super_admin';
+    }
+
+    public static function canEdit($record): bool
+    {
+        return auth()->user()?->role === 'super_admin';
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()?->role === 'super_admin';
+    }
 }

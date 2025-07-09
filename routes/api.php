@@ -13,7 +13,15 @@ use Whoops\Run;
 
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
+
+// update ni
+Route::middleware('auth:sanctum')->put('/user/update', [AuthController::class, 'update']);
+// Ambil data user yang login
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return response()->json($request->user());
+});
 Route::middleware('auth:sanctum')->group(
+
 
     function () {
         // 📦 PRODUK TENUN (stok barang)

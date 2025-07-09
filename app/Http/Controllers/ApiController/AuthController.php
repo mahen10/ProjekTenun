@@ -103,4 +103,38 @@ class AuthController extends Controller
             'message' => 'Logged out successfully'
         ]);
     }
+
+
+    // Update ni
+    public function update(Request $request)
+{
+    $user = auth()->user();
+
+    $validator = Validator::make($request->all(), [
+        'name' => 'sometimes|required|string|max:255',
+        'email' => 'sometimes|required|string|email|max:255|unique:users,email,'.$user->id,
+        'password' => 'nullable|string|min:8',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 422);
+    }
+
+    if ($request->has('password')) {
+        $user->password = Hash::make($request->password);
+    }
+
+    if ($request->has('name')) {
+        $user->name = $request->name;
+    }
+
+    if ($request->has('email')) {
+        $user->email = $request->email;
+    }
+
+    $user->save();
+
+    return response()->json(['message' => 'User updated successfully', 'user' => $user]);
+}
+
 }
